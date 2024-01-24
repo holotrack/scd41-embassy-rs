@@ -51,5 +51,11 @@ pio-proc = "0.2"
 pio = "0.2.1"
 rand = { version = "0.8.5", default-features = false }
 
+postcard = "1.0.0"
+
+# By default, `serde` has the `std` feature enabled, which makes it unsuitable for embedded targets
+# disabling default-features fixes this
+serde = { version = "1.0.*", default-features = false }
+
 [profile.release]
 debug = 2

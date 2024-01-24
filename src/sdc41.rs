@@ -71,7 +71,7 @@ impl<T: I2c<SevenBitAddress>> SDC41<T> {
     }
 
     pub fn temperature(&self) -> f32 {
-        let temp: f32 = self.temperature as f32 * 175_f32 / 65536_f32 - 48.3_f32;
+        let temp: f32 = self.temperature as f32 * 175_f32 / 65536_f32 - 45_f32;
         temp
     }
 
