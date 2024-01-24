@@ -59,7 +59,7 @@ async fn net_task(stack: &'static Stack<cyw43::NetDriver<'static>>) -> ! {
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 struct Measurments {
     cotwo: u16,
-    // temp: f32,
+    temp: f32,
     // humdt: f32,
 }
 
