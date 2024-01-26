@@ -14,6 +14,7 @@ use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_25, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_rp::{bind_interrupts, i2c};
 use embassy_time::{Duration, Timer};
+use embedded_hal_1::i2c::SevenBitAddress;
 use embedded_hal_async::i2c::I2c;
 use embedded_io_async::Write;
 use static_cell::StaticCell;
@@ -42,11 +43,7 @@ bind_interrupts!(struct Irqs {
 
 #[embassy_executor::task]
 async fn wifi_task(
-    runner: cyw43::Runner<
-        'static,
-        Output<'static, PIN_23>,
-        PioSpi<'static, PIN_25, PIO0, 0, DMA_CH0>,
-    >,
+    runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO0, 0, DMA_CH0>>,
 ) -> ! {
     runner.run().await
 }
@@ -56,11 +53,11 @@ async fn net_task(stack: &'static Stack<cyw43::NetDriver<'static>>) -> ! {
     stack.run().await
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Measurments {
     cotwo: u16,
     temp: f32,
-    // humdt: f32,
+    humdt: f32,
 }
 
 #[embassy_executor::main]
@@ -181,15 +178,15 @@ async fn main(spawner: Spawner) {
 
             sdc41.measurements().await;
             let co2 = sdc41.co2();
-            // let humidity = sdc41.humidity();
-            // let temerature = sdc41.temperature();
-            // info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
+            let humidity = sdc41.humidity();
+            let temerature = sdc41.temperature();
+            info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
 
             let data = to_slice(
                 &Measurments {
                     cotwo: co2,
-                    // temp: temerature,
-                    // humdt: humidity,
+                    temp: temerature,
+                    humdt: humidity,
                 },
                 &mut buf,
             )
