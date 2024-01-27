@@ -1,6 +1,7 @@
 use embassy_time::Timer;
 // use embedded_hal_1::i2c::SevenBitAddress;
 // use embedded_hal_async::i2c::I2c;
+use defmt::*;
 use embassy_rp::i2c::Async;
 use embassy_rp::i2c::I2c;
 use embassy_rp::peripherals::I2C1;
@@ -9,7 +10,7 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::commands::*;
 
-pub struct SDC41 {
+pub struct SCD41 {
     addr: u16,
     i2c: I2c<'static, I2C1, Async>,
 
@@ -23,7 +24,7 @@ pub struct SDC41 {
     crc_humidity: u8,
 }
 
-impl SDC41 {
+impl SCD41 {
     pub fn new(addr: u16, i2c: I2c<'static, I2C1, Async>) -> Self {
         Self {
             addr,
@@ -37,34 +38,38 @@ impl SDC41 {
         }
     }
 
-    pub async fn measurements(&mut self) {
-        let mut data = [0u8; 9];
+    pub async fn measurements(&mut self) -> ! {
+        loop {
+            info!("MEASUREMENTS MEASUREMENTS MEASUREMENTS");
 
-        self.i2c
-            .write_async(self.addr, STOP_PERIODIC_MEASUREMENT)
-            .await
-            .unwrap();
-        Timer::after_millis(500).await;
+            let mut data = [0u8; 9];
 
-        self.i2c
-            .write_async(self.addr, START_PERIODIC_MESUREMENT)
-            .await
-            .unwrap();
-        Timer::after_secs(5).await;
+            self.i2c
+                .write_async(self.addr, STOP_PERIODIC_MEASUREMENT)
+                .await
+                .unwrap();
+            Timer::after_millis(500).await;
 
-        self.i2c
-            .write_read_async(self.addr, READ_MEASUREMENT, &mut data)
-            .await
-            .unwrap();
+            self.i2c
+                .write_async(self.addr, START_PERIODIC_MESUREMENT)
+                .await
+                .unwrap();
+            Timer::after_secs(5).await;
 
-        self.co2 = u16::from_be_bytes([data[0], data[1]]);
-        self.crc_co2 = data[2];
+            self.i2c
+                .write_read_async(self.addr, READ_MEASUREMENT, &mut data)
+                .await
+                .unwrap();
 
-        self.temperature = u16::from_be_bytes([data[3], data[4]]);
-        self.crc_temperature = data[5];
+            self.co2 = u16::from_be_bytes([data[0], data[1]]);
+            self.crc_co2 = data[2];
 
-        self.humidity = u16::from_be_bytes([data[6], data[7]]);
-        self.crc_humidity = data[8];
+            self.temperature = u16::from_be_bytes([data[3], data[4]]);
+            self.crc_temperature = data[5];
+
+            self.humidity = u16::from_be_bytes([data[6], data[7]]);
+            self.crc_humidity = data[8];
+        }
     }
 
     pub fn co2(&self) -> u16 {

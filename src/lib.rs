@@ -1,4 +1,4 @@
 #![no_std]
 
 pub mod commands;
-pub mod sdc41;
+pub mod scd41;

@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 extern crate scd41_embassy_rs;
 
 use defmt::*;
-use scd41_embassy_rs::sdc41::SDC41;
+use scd41_embassy_rs::scd41::SCD41;
 
 const ADDR: u16 = 0x62;
 
@@ -56,17 +56,17 @@ async fn net_task(stack: &'static Stack<cyw43::NetDriver<'static>>) -> ! {
     stack.run().await
 }
 
+#[embassy_executor::task]
+async fn measurments_task(sensor: &'static mut SCD41) -> ! {
+    sensor.measurements().await
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Measurments {
     cotwo: u16,
     temp: f32,
     humdt: f32,
 }
-
-// #[embassy_executor::task]
-// async fn measurments_task(sensor: SDC41) -> ! {
-//     sensor.measurments.await
-// }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -82,7 +82,7 @@ async fn main(spawner: Spawner) {
 
     let i2c = i2c::I2c::new_async(p.I2C1, scl, sda, Irqs, i2c::Config::default());
 
-    let mut sdc41 = SDC41::new(ADDR, i2c);
+    let mut scd41 = SCD41::new(ADDR, i2c);
 
     // WiFi
 
@@ -155,6 +155,9 @@ async fn main(spawner: Spawner) {
     let mut tx_buffer = [0; 4096];
     let mut buf: [u8; 4096] = [0; 4096];
 
+    unwrap!(spawner.spawn(measurments_task(&mut scd41))); //tutaj trzeba cos wykombinowac, potrzebuje static (cale zycie programu lifetime i mutable)
+    println!("after");
+
     loop {
         let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
         socket.set_timeout(Some(Duration::from_secs(10)));
@@ -184,23 +187,23 @@ async fn main(spawner: Spawner) {
 
             // info!("rxd {}", from_utf8(&buf[..n]).unwrap());
 
-            sdc41.measurements().await;
-            let co2 = sdc41.co2();
-            let humidity = sdc41.humidity();
-            let temerature = sdc41.temperature();
-            info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
+            // sdc41.measurements().await;
+            // let co2 = sdc41.co2();
+            // let humidity = sdc41.humidity();
+            // let temerature = sdc41.temperature();
+            // info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
 
-            let data = to_slice(
-                &Measurments {
-                    cotwo: co2,
-                    temp: temerature,
-                    humdt: humidity,
-                },
-                &mut buf,
-            )
-            .unwrap();
+            // let data = to_slice(
+            //     &Measurments {
+            //         cotwo: co2,
+            //         temp: temerature,
+            //         humdt: humidity,
+            //     },
+            //     &mut buf,
+            // )
+            // .unwrap();
 
-            // let data = b"Hello world!";
+            let data = b"Hello world!";
 
             match socket.write_all(data).await {
                 Ok(()) => {}
