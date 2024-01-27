@@ -1,16 +1,17 @@
 use embassy_time::Timer;
-use embedded_hal_1::i2c::SevenBitAddress;
-use embedded_hal_async::i2c::I2c;
+// use embedded_hal_1::i2c::SevenBitAddress;
+// use embedded_hal_async::i2c::I2c;
+use embassy_rp::i2c::Async;
+use embassy_rp::i2c::I2c;
+use embassy_rp::peripherals::I2C1;
+
 use {defmt_rtt as _, panic_probe as _};
 
 use crate::commands::*;
 
-pub struct SDC41<T>
-where
-    T: I2c<SevenBitAddress>,
-{
-    addr: u8,
-    i2c: T,
+pub struct SDC41 {
+    addr: u16,
+    i2c: I2c<'static, I2C1, Async>,
 
     co2: u16,
     crc_co2: u8,
@@ -22,8 +23,8 @@ where
     crc_humidity: u8,
 }
 
-impl<T: I2c<SevenBitAddress>> SDC41<T> {
-    pub fn new(addr: u8, i2c: T) -> Self {
+impl SDC41 {
+    pub fn new(addr: u16, i2c: I2c<'static, I2C1, Async>) -> Self {
         Self {
             addr,
             i2c,
@@ -40,19 +41,19 @@ impl<T: I2c<SevenBitAddress>> SDC41<T> {
         let mut data = [0u8; 9];
 
         self.i2c
-            .write(self.addr, &STOP_PERIODIC_MEASUREMENT)
+            .write_async(self.addr, STOP_PERIODIC_MEASUREMENT)
             .await
             .unwrap();
         Timer::after_millis(500).await;
 
         self.i2c
-            .write(self.addr, &START_PERIODIC_MESUREMENT)
+            .write_async(self.addr, START_PERIODIC_MESUREMENT)
             .await
             .unwrap();
         Timer::after_secs(5).await;
 
         self.i2c
-            .write_read(self.addr, &READ_MEASUREMENT, &mut data)
+            .write_read_async(self.addr, READ_MEASUREMENT, &mut data)
             .await
             .unwrap();
 

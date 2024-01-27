@@ -9,13 +9,17 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
 use embassy_net::{Config, Stack, StackResources};
+use embassy_rp::adc::Async;
 use embassy_rp::gpio::{Level, Output};
+use embassy_rp::peripherals::I2C1;
 use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_25, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_rp::{bind_interrupts, i2c};
 use embassy_time::{Duration, Timer};
 use embedded_hal_1::i2c::SevenBitAddress;
-use embedded_hal_async::i2c::I2c;
+use embedded_hal_1::i2c::{Error, ErrorType};
+// use embedded_hal_async::i2c::I2c;
+use embassy_rp::i2c::I2c;
 use embedded_io_async::Write;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
@@ -28,10 +32,9 @@ use serde::{Deserialize, Serialize};
 extern crate scd41_embassy_rs;
 
 use defmt::*;
-use embassy_rp::peripherals::I2C1;
 use scd41_embassy_rs::sdc41::SDC41;
 
-const ADDR: u8 = 0x62;
+const ADDR: u16 = 0x62;
 
 const WIFI_NETWORK: &str = "SilesianCloud-guest";
 const WIFI_PASSWORD: &str = "T@jlandia123qwe";
@@ -59,6 +62,11 @@ struct Measurments {
     temp: f32,
     humdt: f32,
 }
+
+// #[embassy_executor::task]
+// async fn measurments_task(sensor: SDC41) -> ! {
+//     sensor.measurments.await
+// }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
