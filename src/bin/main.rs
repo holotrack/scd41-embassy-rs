@@ -80,9 +80,12 @@ async fn main(spawner: Spawner) {
 
     info!("set up i2c ");
 
-    let i2c = i2c::I2c::new_async(p.I2C1, scl, sda, Irqs, i2c::Config::default());
+    static SCD41: StaticCell<SCD41> = StaticCell::new();
 
-    let mut scd41 = SCD41::new(ADDR, i2c);
+    let i2c: I2c<'_, I2C1, i2c::Async> =
+        i2c::I2c::new_async(p.I2C1, scl, sda, Irqs, i2c::Config::default());
+
+    let scd41: &'static mut SCD41 = SCD41.init(SCD41::new(ADDR, i2c));
 
     // WiFi
 
@@ -155,7 +158,7 @@ async fn main(spawner: Spawner) {
     let mut tx_buffer = [0; 4096];
     let mut buf: [u8; 4096] = [0; 4096];
 
-    unwrap!(spawner.spawn(measurments_task(&mut scd41))); //tutaj trzeba cos wykombinowac, potrzebuje static (cale zycie programu lifetime i mutable)
+    unwrap!(spawner.spawn(measurments_task(scd41))); //tutaj trzeba cos wykombinowac, potrzebuje static (cale zycie programu lifetime i mutable)
     println!("after");
 
     loop {
@@ -188,10 +191,10 @@ async fn main(spawner: Spawner) {
             // info!("rxd {}", from_utf8(&buf[..n]).unwrap());
 
             // sdc41.measurements().await;
-            // let co2 = sdc41.co2();
-            // let humidity = sdc41.humidity();
-            // let temerature = sdc41.temperature();
-            // info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
+            let co2 = scd41.co2();
+            // let humidity = scd41.humidity();
+            // let temerature = scd41.temperature();
+            info!("CO2: {}", co2);
 
             // let data = to_slice(
             //     &Measurments {
