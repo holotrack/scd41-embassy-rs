@@ -75,13 +75,17 @@ static SHARED: Mutex<ThreadModeRawMutex, Measurements> = Mutex::new(Measurements
 #[embassy_executor::task]
 async fn measurments_task(sensor: &'static mut SCD41) -> ! {
     loop {
+        debug!("MEASURING IN TASK");
         sensor.measurements().await;
+        debug!("LOCKING IN TASK");
+
         let mut shared = SHARED.lock().await;
         *shared = Measurements {
             cotwo: sensor.co2(),
             humdt: sensor.humidity(),
             temp: sensor.temperature(),
-        }
+        };
+        debug!("UNLOCKING IN TASK");
     }
 }
 
@@ -177,46 +181,66 @@ async fn main(spawner: Spawner) {
 
     unwrap!(spawner.spawn(measurments_task(scd41)));
     println!("after");
+    debug!("BEFORE GPIO SET IN MAIN");
+    control.gpio_set(0, false).await;
+    debug!("AFTER GPIO SET IN MAIN");
 
     loop {
+        debug!("SOCKET IN MAIN");
         let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
-        socket.set_timeout(Some(Duration::from_secs(10)));
+        debug!("AFTER SOCKET IN MAIN");
 
-        control.gpio_set(0, false).await;
+        socket.set_timeout(Some(Duration::from_secs(10)));
+        debug!("AFTER TIMEOUT IN MAIN");
+
+        debug!("BEFORE SOCKET.ACCEPT SET IN MAIN");
+
         info!("Listening on TCP:1234...");
         if let Err(e) = socket.accept(1234).await {
             warn!("accept error: {:?}", e);
             continue;
         }
 
+        debug!("AFTER SOCKET.ACCEPT SET IN MAIN");
+
         info!("Received connection from {:?}", socket.remote_endpoint());
         control.gpio_set(0, true).await;
+        debug!("LOCKING IN MAIN");
+        {
+            let shared = SHARED.lock().await;
 
-        let shared = SHARED.lock().await;
+            debug!("AFTER LOCKING IN MAIN");
 
-        let co2 = shared.cotwo;
-        let humidity = shared.humdt;
-        let temerature = shared.temp;
-        info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
+            let co2 = shared.cotwo;
+            let humidity = shared.humdt;
+            let temerature = shared.temp;
+            info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
 
-        let data = to_slice(
-            &Measurements {
-                cotwo: co2,
-                temp: temerature,
-                humdt: humidity,
-            },
-            &mut buf,
-        )
-        .unwrap();
+            let data = to_slice(
+                &Measurements {
+                    cotwo: co2,
+                    temp: temerature,
+                    humdt: humidity,
+                },
+                &mut buf,
+            )
+            .unwrap();
+            debug!("AFTER DATA SERIALIZATION IN MAIN");
+            debug!("WRITE ALL LOOP IN MAIN");
+            loop {
+                match socket.write_all(data).await {
+                    Ok(()) => {}
+                    Err(e) => {
+                        warn!("write error: {:?}", e);
+                        break;
+                    }
+                };
+            }
+            debug!("AFTER WRITE ALL LOOP IN MAIN");
 
-        loop {
-            match socket.write_all(data).await {
-                Ok(()) => {}
-                Err(e) => {
-                    warn!("write error: {:?}", e);
-                    break;
-                }
-            };
+            debug!("BEFORE GPIO SET IN LOOP");
+            control.gpio_set(0, false).await;
+            debug!("AFTER GPIO SET IN LOOP");
         }
     }
 }
