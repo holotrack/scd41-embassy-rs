@@ -181,9 +181,9 @@ async fn main(spawner: Spawner) {
 
     unwrap!(spawner.spawn(measurments_task(scd41)));
     println!("after");
-    debug!("BEFORE GPIO SET IN MAIN");
-    control.gpio_set(0, false).await;
-    debug!("AFTER GPIO SET IN MAIN");
+    // debug!("BEFORE GPIO SET IN MAIN");
+    // control.gpio_set(0, false).await;
+    // debug!("AFTER GPIO SET IN MAIN");
 
     loop {
         debug!("SOCKET IN MAIN");
@@ -204,7 +204,7 @@ async fn main(spawner: Spawner) {
         debug!("AFTER SOCKET.ACCEPT SET IN MAIN");
 
         info!("Received connection from {:?}", socket.remote_endpoint());
-        control.gpio_set(0, true).await;
+        // control.gpio_set(0, true).await;
         debug!("LOCKING IN MAIN");
         {
             let shared = SHARED.lock().await;
@@ -238,9 +238,9 @@ async fn main(spawner: Spawner) {
             }
             debug!("AFTER WRITE ALL LOOP IN MAIN");
 
-            debug!("BEFORE GPIO SET IN LOOP");
-            control.gpio_set(0, false).await;
-            debug!("AFTER GPIO SET IN LOOP");
+            // debug!("BEFORE GPIO SET IN LOOP");
+            // control.gpio_set(0, false).await;
+            // debug!("AFTER GPIO SET IN LOOP");
         }
     }
 }
