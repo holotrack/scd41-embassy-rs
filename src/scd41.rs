@@ -38,38 +38,34 @@ impl SCD41 {
         }
     }
 
-    pub async fn measurements(&mut self) -> ! {
-        loop {
-            info!("MEASUREMENTS MEASUREMENTS MEASUREMENTS");
+    pub async fn measurements(&mut self) {
+        let mut data = [0u8; 9];
 
-            let mut data = [0u8; 9];
+        self.i2c
+            .write_async(self.addr, STOP_PERIODIC_MEASUREMENT)
+            .await
+            .unwrap();
+        Timer::after_millis(500).await;
 
-            self.i2c
-                .write_async(self.addr, STOP_PERIODIC_MEASUREMENT)
-                .await
-                .unwrap();
-            Timer::after_millis(500).await;
+        self.i2c
+            .write_async(self.addr, START_PERIODIC_MESUREMENT)
+            .await
+            .unwrap();
+        Timer::after_secs(5).await;
 
-            self.i2c
-                .write_async(self.addr, START_PERIODIC_MESUREMENT)
-                .await
-                .unwrap();
-            Timer::after_secs(5).await;
+        self.i2c
+            .write_read_async(self.addr, READ_MEASUREMENT, &mut data)
+            .await
+            .unwrap();
 
-            self.i2c
-                .write_read_async(self.addr, READ_MEASUREMENT, &mut data)
-                .await
-                .unwrap();
+        self.co2 = u16::from_be_bytes([data[0], data[1]]);
+        self.crc_co2 = data[2];
 
-            self.co2 = u16::from_be_bytes([data[0], data[1]]);
-            self.crc_co2 = data[2];
+        self.temperature = u16::from_be_bytes([data[3], data[4]]);
+        self.crc_temperature = data[5];
 
-            self.temperature = u16::from_be_bytes([data[3], data[4]]);
-            self.crc_temperature = data[5];
-
-            self.humidity = u16::from_be_bytes([data[6], data[7]]);
-            self.crc_humidity = data[8];
-        }
+        self.humidity = u16::from_be_bytes([data[6], data[7]]);
+        self.crc_humidity = data[8];
     }
 
     pub fn co2(&self) -> u16 {

@@ -29,6 +29,9 @@ use heapless::Vec;
 use postcard::{from_bytes, to_slice};
 use serde::{Deserialize, Serialize};
 
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::mutex::Mutex;
+
 extern crate scd41_embassy_rs;
 
 use defmt::*;
@@ -56,16 +59,30 @@ async fn net_task(stack: &'static Stack<cyw43::NetDriver<'static>>) -> ! {
     stack.run().await
 }
 
-#[embassy_executor::task]
-async fn measurments_task(sensor: &'static mut SCD41) -> ! {
-    sensor.measurements().await
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Measurments {
+struct Measurements {
     cotwo: u16,
     temp: f32,
     humdt: f32,
+}
+
+static SHARED: Mutex<ThreadModeRawMutex, Measurements> = Mutex::new(Measurements {
+    cotwo: 0,
+    temp: 0_f32,
+    humdt: 0_f32,
+});
+
+#[embassy_executor::task]
+async fn measurments_task(sensor: &'static mut SCD41) -> ! {
+    loop {
+        sensor.measurements().await;
+        let mut shared = SHARED.lock().await;
+        *shared = Measurements {
+            cotwo: sensor.co2(),
+            humdt: sensor.humidity(),
+            temp: sensor.temperature(),
+        }
+    }
 }
 
 #[embassy_executor::main]
@@ -85,7 +102,7 @@ async fn main(spawner: Spawner) {
     let i2c: I2c<'_, I2C1, i2c::Async> =
         i2c::I2c::new_async(p.I2C1, scl, sda, Irqs, i2c::Config::default());
 
-    let scd41: &'static mut SCD41 = SCD41.init(SCD41::new(ADDR, i2c));
+    let scd41 = SCD41.init(SCD41::new(ADDR, i2c));
 
     // WiFi
 
@@ -158,7 +175,7 @@ async fn main(spawner: Spawner) {
     let mut tx_buffer = [0; 4096];
     let mut buf: [u8; 4096] = [0; 4096];
 
-    unwrap!(spawner.spawn(measurments_task(scd41))); //tutaj trzeba cos wykombinowac, potrzebuje static (cale zycie programu lifetime i mutable)
+    unwrap!(spawner.spawn(measurments_task(scd41)));
     println!("after");
 
     loop {
@@ -175,39 +192,24 @@ async fn main(spawner: Spawner) {
         info!("Received connection from {:?}", socket.remote_endpoint());
         control.gpio_set(0, true).await;
 
+        let shared = SHARED.lock().await;
+
+        let co2 = shared.cotwo;
+        let humidity = shared.humdt;
+        let temerature = shared.temp;
+        info!("CO2: {}, TEMP: {}, HUMIDITY: {}", co2, temerature, humidity);
+
+        let data = to_slice(
+            &Measurements {
+                cotwo: co2,
+                temp: temerature,
+                humdt: humidity,
+            },
+            &mut buf,
+        )
+        .unwrap();
+
         loop {
-            // let n = match socket.read(&mut buf).await {
-            //     Ok(0) => {
-            //         warn!("read EOF");
-            //         break;
-            //     }
-            //     Ok(n) => n,
-            //     Err(e) => {
-            //         warn!("read error: {:?}", e);
-            //         break;
-            //     }
-            // };
-
-            // info!("rxd {}", from_utf8(&buf[..n]).unwrap());
-
-            // sdc41.measurements().await;
-            let co2 = scd41.co2();
-            // let humidity = scd41.humidity();
-            // let temerature = scd41.temperature();
-            info!("CO2: {}", co2);
-
-            // let data = to_slice(
-            //     &Measurments {
-            //         cotwo: co2,
-            //         temp: temerature,
-            //         humdt: humidity,
-            //     },
-            //     &mut buf,
-            // )
-            // .unwrap();
-
-            let data = b"Hello world!";
-
             match socket.write_all(data).await {
                 Ok(()) => {}
                 Err(e) => {
