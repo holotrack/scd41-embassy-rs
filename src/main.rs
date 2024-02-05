@@ -2,31 +2,24 @@
 #![no_main]
 #![allow(async_fn_in_trait)]
 
-use core::str::from_utf8;
-
 use cyw43_pio::PioSpi;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
 use embassy_net::{Config, Stack, StackResources};
-use embassy_rp::adc::Async;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::I2C1;
 use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_25, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_rp::{bind_interrupts, i2c};
 use embassy_time::{Duration, Timer};
-use embedded_hal_1::i2c::SevenBitAddress;
-use embedded_hal_1::i2c::{Error, ErrorType};
 // use embedded_hal_async::i2c::I2c;
 use embassy_rp::i2c::I2c;
 use embedded_io_async::Write;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
-use core::ops::Deref;
-use heapless::Vec;
-use postcard::{from_bytes, to_slice};
+use postcard::to_slice;
 use serde::{Deserialize, Serialize};
 
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
@@ -34,7 +27,6 @@ use embassy_sync::mutex::Mutex;
 
 extern crate scd41_embassy_rs;
 
-use defmt::*;
 use scd41_embassy_rs::scd41::SCD41;
 
 const ADDR: u16 = 0x62;
