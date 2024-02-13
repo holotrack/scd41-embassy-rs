@@ -1,10 +1,7 @@
-use embassy_time::Timer;
-// use embedded_hal_1::i2c::SevenBitAddress;
-// use embedded_hal_async::i2c::I2c;
-
 use embassy_rp::i2c::Async;
 use embassy_rp::i2c::I2c;
 use embassy_rp::peripherals::I2C1;
+use embassy_time::Timer;
 
 use {defmt_rtt as _, panic_probe as _};
 
