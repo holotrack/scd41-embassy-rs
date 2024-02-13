@@ -6,7 +6,7 @@ use cyw43_pio::PioSpi;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
-use embassy_net::{Config, Stack, StackResources};
+use embassy_net::{Config, DhcpConfig, Stack, StackResources};
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::I2C1;
 use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_25, PIO0};
@@ -132,7 +132,9 @@ async fn main(spawner: Spawner) {
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
 
-    let config = Config::dhcpv4(Default::default());
+    let mut dhcp = embassy_net::DhcpConfig::default();
+    dhcp.hostname = Some(heapless::String::try_from("scd41-sensor").unwrap());
+    let config = Config::dhcpv4(dhcp);
     //let config = embassy_net::Config::ipv4_static(embassy_net::StaticConfigV4 {
     //    address: Ipv4Cidr::new(Ipv4Address::new(192, 168, 69, 2), 24),
     //    dns_servers: Vec::new(),

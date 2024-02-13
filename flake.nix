@@ -46,6 +46,7 @@
             cargo-watch
             rust-analyzer
             probe-rs
+            elf2uf2-rs
             clippy
             libudev-zero
             capnproto
