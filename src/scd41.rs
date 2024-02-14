@@ -82,8 +82,8 @@ impl SCD41 {
 
 mod test {
     // Import all functions to test module
-    use super::*;
 
+    use super::*;
     #[test]
     fn task1_works() {
         //    assert_eq!(task1(), "Accomplished task 1!".to_string() );
