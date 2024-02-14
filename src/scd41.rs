@@ -79,3 +79,18 @@ impl SCD41 {
         humi
     }
 }
+
+mod test {
+    // Import all functions to test module
+    use super::*;
+
+    #[test]
+    fn task1_works() {
+        //    assert_eq!(task1(), "Accomplished task 1!".to_string() );
+    }
+
+    #[test]
+    fn task2_works() {
+        //    assert_eq!(task3(), "Accomplished task 2!".to_string() );
+    }
+}
