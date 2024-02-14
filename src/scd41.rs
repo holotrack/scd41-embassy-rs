@@ -3,8 +3,6 @@ use embassy_rp::i2c::I2c;
 use embassy_rp::peripherals::I2C1;
 use embassy_time::Timer;
 
-use {defmt_rtt as _, panic_probe as _};
-
 use crate::commands::*;
 
 pub struct SCD41 {
