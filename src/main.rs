@@ -11,7 +11,7 @@ use embassy_rp::gpio::{Level, Output};
 use embassy_rp::i2c::I2c;
 use embassy_rp::peripherals::I2C1;
 use embassy_rp::peripherals::{DMA_CH0, PIN_23, PIN_25, PIO0};
-use embassy_rp::pio::{Pio};
+use embassy_rp::pio::Pio;
 use embassy_rp::{bind_interrupts, i2c};
 use embassy_time::{Duration, Timer};
 use embedded_io_async::Write;
